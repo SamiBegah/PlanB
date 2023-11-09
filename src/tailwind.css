@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import "rsuite/dist/rsuite.css";
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
+
+html,
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #fafafa;
+  color: black;
+}
+
+a {
+  text-decoration-line: none !important;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #162450;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #3f83f8;
+}
+
+.vertical-timeline {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: start !important;
+  margin: 0% !important;
+  padding: 0% !important;
+}
+.vertical-timeline-element {
+  margin-top: 0% !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: start !important;
+  align-items: center !important;
+}
+
+.vertical-timeline-element-date {
+  font-size: 30px !important;
+  text-align: end !important;
+  padding: 0% !important;
+  margin: auto !important;
+  opacity: 100% !important;
+}
+
+.vertical-timeline-element-content {
+  padding: 0% !important;
+  margin-bottom: 0% !important;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+}
+
+.vertical-timeline-element-content h2 {
+  color: #172554 !important;
+}
+
+.vertical-timeline-element-content p {
+  font-size: 16px !important;
+  margin: 0% !important;
+}
+
+@layer utilities {
+  @variants responsive {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+    }
+  }
+}
+
+@layer base {
+  h1 {
+    @apply text-3xl md:text-5xl;
+  }
+  h2 {
+    @apply text-2xl md:text-4xl;
+  }
+  h3 {
+    @apply text-xl md:text-3xl;
+  }
+  h4 {
+    @apply text-lg md:text-2xl;
+  }
+  h5 {
+    @apply text-base md:text-xl;
+  }
+  h6 {
+    @apply text-sm md:text-lg;
+  }
+  p {
+    @apply text-sm md:text-base;
+  }
+  a {
+    @apply text-sm md:text-base;
+  }
+  button {
+    @apply text-sm md:text-base;
+  }
+  input,
+  select,
+  textarea,
+  label {
+    @apply text-sm md:text-base;
+  }
+  small,
+  sub {
+    @apply text-xs md:text-sm;
+  }
+  blockquote {
+    @apply text-base md:text-lg;
+  }
+}
+
+.mapboxgl-ctrl-attrib-inner {
+  visibility: hidden;
+  height: 0;
+}
+
+.mapboxgl-ctrl {
+  visibility: hidden;
+}
+
+.rs-btn-group {
+  margin-top: 2%;
+}
+
+.rs-btn:hover {
+  background-color: #162450;
+  color: white;
+}
+
+.rs-btn-disabled:hover {
+  background-color: gray;
+  color: white;
+}
