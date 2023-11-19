@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   VerticalTimeline,
@@ -7,14 +7,86 @@ import {
 import "react-vertical-timeline-component/style.min.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 import jobsEnd from "../../media/jobsEnd.jpg";
-import Map from "react-map-gl";
 import locationIcon from "../../media/locationIcon.png";
 import fieldIcon from "../../media/fieldIcon.png";
 import scheduleIcon from "../../media/scheduleIcon.png";
 import salaryIcon from "../../media/salaryIcon.png";
 import employerEnd from "../../media/employerEnd.jpg";
+import { Carousel } from "react-responsive-carousel";
+import "react-responsive-carousel/lib/styles/carousel.min.css";
+import uuid from "react-uuid";
+import {
+  addDoc,
+  getDocs,
+  collection,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  FirestoreDataConverter,
+  setDoc,
+} from "firebase/firestore";
 
-const EmployertHub = ({ fields }) => {
+const EmployertHub = ({ db, userData, setPopUpMessage }) => {
+  const [contactFullName, setContactFullName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactTitle, setContactTitle] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+
+  const handleNewMessage = async (e) => {
+    e.preventDefault();
+    try {
+      await setDoc(
+        doc(
+          db,
+          `${contactEmail} - messages envoyés`,
+          `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De ${contactEmail} à Plan B Placement: ${contactTitle}`
+        ),
+        {
+          id: `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De ${contactEmail} à Plan B Placement: ${contactTitle}`,
+          to: "Plan B",
+          title: contactTitle,
+          content: contactMessage,
+          from: contactEmail,
+          createdAt: new Date().toDateString(),
+        }
+      );
+      await setDoc(
+        doc(
+          db,
+          `Plan B - messages reçues`,
+          `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De ${contactEmail} à Plan B: ${contactTitle} `
+        ),
+        {
+          id: `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De ${contactEmail} à Plan B: ${contactTitle} `,
+          to: "Plan B",
+          title: contactTitle,
+          content: contactMessage,
+          from: contactEmail,
+          createdAt: new Date().toDateString(),
+        }
+      );
+      setContactTitle("");
+      setContactMessage("");
+      setPopUpMessage("Message envoyé.");
+    } catch (e) {
+      setPopUpMessage("Message non envoyé. Erreur produite. " + e.message);
+    }
+  };
+
   const advantages = [
     "Accès à un vaste réseau de candidats dans une variété d'industries.",
     "Réduction de votre temps consacré au processus de recrutement.",
@@ -25,6 +97,14 @@ const EmployertHub = ({ fields }) => {
     "Accès à des conseils d'experts sur les tendances et les meilleures pratiques du marché du travail.",
     "Flexibilité dans les options de recrutement ; permanents, temporaires, contractuels et occasionnel.",
   ];
+
+  useEffect(() => {
+    if (userData) {
+      setContactFullName(userData.firstName + " " + userData.lastName);
+
+      setContactEmail(userData.email);
+    }
+  }, [userData]);
 
   return (
     <main className="flex flex-col  h-full ">
@@ -81,37 +161,38 @@ const EmployertHub = ({ fields }) => {
         <div className=" px-10  flex flex-col gap-5  text-black">
           <div className="flex flex-col w-full  gap-40">
             <div className="text-center flex flex-col gap-10  w-full    ">
-              <h3 className="text-start"> Nos services </h3>
-              <div className="flex  justify-around gap-20 text-black">
-                <div className="bg-blue-950 text-white shadow-xl  border border-gray-200 scale-95 hover:scale-100  transition-all rounded-lg p-5  ">
+              <h2 className="text-center py-10 font-bold"> Nos services </h2>
+              <div className="grid grid-cols-3  justify-around gap-20 text-black">
+                <div className="bg-blue-950 text-white shadow-xl flex flex-col justify-around  scale-100 hover:scale-105  transition-all rounded-lg p-5  ">
                   <h5 className="font-bold ">Recherche de candidat</h5>
                   <p className="text-justify p-5">
-                    Nous nous efforçons d&#39;établir des partenariats solides
-                    avec nos clients, en nous assurant de bien comprendre leurs
-                    besoins en matière de personnel.
+                    Notre savoir-faire principal est l'acquisition de talents.
+                    Ce service sur mesure inclus une recherche minutieuse qui
+                    cible les profils les plus adaptés à vos besoins.
+                  </p>
+                </div>
+                <div className="bg-blue-500 text-white shadow-xl flex flex-col justify-around  scale-100 hover:scale-105 transition-all rounded-lg p-5  ">
+                  <h5 className="font-bold "> Formation </h5>
+                  <p className="text-justify p-5">
+                    Plan B créé et délivre des formations générales ou adaptées
+                    à votre domaine d'expertise pour vos employés actuels ou
+                    pour les nouvelles recrues.
                   </p>
                 </div>
 
-                <div className="bg-blue-500 text-white shadow-xl  border border-gray-200 scale-95 hover:scale-100 transition-all rounded-lg p-5  ">
-                  <h5 className="font-bold "> Référencement </h5>
+                <div className="bg-blue-950 text-white shadow-xl flex flex-col justify-around  scale-100 hover:scale-105 transition-all rounded-lg p-5  ">
+                  <h5 className="font-bold "> Suivi post-embauche </h5>
                   <p className="text-justify p-5">
-                    Nous nous efforçons d&#39;établir des partenariats solides
-                    avec nos clients, en nous assurant de bien comprendre leurs
-                    besoins en matière de personnel.
-                  </p>
-                </div>
-                <div className="bg-blue-950 text-white shadow-xl  border border-gray-200 scale-95 hover:scale-100 transition-all rounded-lg p-5  ">
-                  <h5 className="font-bold ">Recherche de candidat</h5>
-                  <p className="text-justify p-5">
-                    Nous nous efforçons d&#39;établir des partenariats solides
-                    avec nos clients, en nous assurant de bien comprendre leurs
-                    besoins en matière de personnel.
+                    Notre engagement ne s'arrête pas à l'embauche. Avec notre
+                    suivi post-embauche, nous accompagnons l'intégration de vos
+                    nouvelles recrues pour assurer une transition fluide et une
+                    performance optimale au sein de votre équipe.
                   </p>
                 </div>
               </div>
             </div>
             <div className="text-center flex flex-col gap-10  w-full    ">
-              <h3 className="text-start"> Nos avantages </h3>
+              <h2 className="text-center py-10 font-bold"> Nos avantages </h2>
               <ul className="grid grid-cols-2 grid-rows-4 bg-white shadow-xl border border-gray-200    rounded-lg p-10  transition-all ">
                 {advantages.map((advantage, index) => {
                   return (
@@ -128,7 +209,7 @@ const EmployertHub = ({ fields }) => {
         </div>
         {/* Processus d'embauche */}
         <div className="max-w-[1920px] mx-auto pb-40">
-          <h2 className="text-start text-3xl px-10">
+          <h2 className="text-center py-10 font-bold">
             Processus de recrutement
           </h2>
           <div className="w-full p-10   flex flex-col justify-center items-center  rounded-lg">
@@ -343,98 +424,262 @@ const EmployertHub = ({ fields }) => {
           </div>
         </div>
       </div>
+      <div className="flex flex-col gap-10 mx-auto w-1/2 ">
+        <h3 className="text-blue-500 font-bold text-center">
+          L'avis de nos clients
+        </h3>
 
+        <Carousel
+          autoPlay
+          infiniteLoop
+          emulateTouch
+          interval={4000}
+          showStatus={false}
+          showArrows={false}
+          showThumbs={false}
+          className="flex-1"
+        >
+          <blockquote className="text-white  flex flex-col items-center justify-center p-1 cursor-grab">
+            <q className=" pt-4 px-8 pb-8 font-bold">
+              En tant qu'employeur, je suis plus que satisfait par la qualité
+              des candidats que Plan B nous présente. Ils ont un véritable truc
+              pour dénicher les talents qui s'intègrent parfaitement à notre
+              culture d'entreprise.
+            </q>
+            <div className="flex flex-col gap-1 items-center">
+              <div className="flex gap-2 justify-center">
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+              </div>
+              <footer className=" pb-5">— Sophia D.</footer>
+            </div>
+          </blockquote>
+
+          <blockquote className="text-white  flex flex-col items-center justify-center p-1 cursor-grab">
+            <q className=" pt-4 px-8 pb-8 font-bold">
+              Plan B a transformé le processus de recrutement pour notre
+              entreprise grâce à leur capacité à comprendre nos besoins et à y
+              répondre dans les délais. Ils sont devenus notre partenaire de
+              confiance pour le recrutement.
+            </q>
+            <div className="flex flex-col gap-1 items-center">
+              <div className="flex gap-2 justify-center">
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+              </div>
+              <footer className=" pb-5">— Jeanne A.</footer>
+            </div>
+          </blockquote>
+
+          <blockquote className="text-white  flex flex-col items-center justify-center p-1 cursor-grab">
+            <q className=" pt-4 px-8 pb-8 font-bold">
+              L'approche personnalisée de Plan B a été un vrai game-changer pour
+              ma recherche d'emploi. L'équipe m'a écouté et a su trouver le
+              poste qui correspondait vraiment à ce que je recherchais. Un grand
+              merci !
+            </q>
+            <div className="flex flex-col gap-1 items-center">
+              <div className="flex gap-2 justify-center">
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+                <svg
+                  className="w-5 h-5 text-yellow-300 mr-1"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 22 20"
+                >
+                  <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
+                </svg>
+              </div>
+              <footer className=" pb-5">— Maxime L.</footer>
+            </div>
+          </blockquote>
+        </Carousel>
+      </div>
       {/* Bottom page */}
       <div className="w-full h-full bg-reviews-img bg-cover bg-center  ">
-        <div className=" bg-opacity-50  bg-gradient-to-t from-blue-950 via-transparent to-[#fafafa] text-center pb-20">
-          <div className=" max-w-[1920px] mx-auto grid grid-cols-2 px-40  gap-60">
-            {/* Map */}
-            <div className=" h-full rounded-lg flex flex-col gap-10">
-              <div className="flex flex-col gap-10 ">
-                <h3 className="text-blue-500 font-bold ">
-                  Faites nous confiance.
-                </h3>
-                <div className="flex flex-col bg-blue-500 rounded-lg gap-5  p-8  px-10 shadow-xl text-white">
-                  <h4>
-                    Nous nous efforçons d&#39;établir des partenariats solides
-                    avec nos clients, en nous assurant de bien comprendre leurs
-                    besoins en matière de personnel.
-                  </h4>
-                </div>
-              </div>
-              <div className="relative h-[600px] text-transparent  bg-white p-1 rounded-xl transition-all shadow-lg shadow-blue-950">
-                <div className="absolute  text-blue-950  right-1/3 bottom-0 p-2 z-10  rounded-lg">
-                  <small className="font-bold">
-                    Zone couverte: Grand Montréal.
-                  </small>
-                </div>
-
-                <Map
-                  mapboxAccessToken="pk.eyJ1IjoiYXNhbTgyIiwiYSI6ImNsbnRhand5eDAxeHcycW83MGV2dDNycm4ifQ.26PgD9spxcsC0W1LxxNFOQ"
-                  initialViewState={{
-                    longitude: -73.567256,
-                    latitude: 45.5016889,
-                    zoom: 9,
-                  }}
-                  mapStyle="mapbox://styles/asam82/clntasx8200e501p7elezdobu"
-                  boxZoom={false}
-                  scrollZoom={false}
-                  dragRotate={false}
-                  dragPan={false}
-                  doubleClickZoom={false}
-                />
-              </div>
-            </div>
-
+        <div className="flex  h-full w-full bg-gradient-to-b from-[#fafafa]  via-transparent to-blue-950 text-center py-40 ">
+          <div className=" max-w-[1920px] mx-auto px-20 w-1/2 gap-40 flex flex-col ">
             {/*  Contact */}
             <div className=" h-full rounded-lg flex flex-col gap-10">
-              <div className="flex flex-col gap-10 ">
-                <h3 className="text-blue-950 font-bold ">
-                  Travaillons ensemble dès aujourd'hui.
-                </h3>
-                <div className="flex flex-col bg-blue-950 rounded-lg gap-5  p-8  px-10 shadow-xl text-white">
-                  <h4>
-                    Nous nous efforçons d&#39;établir des partenariats solides
-                    avec nos clients, en nous assurant de bien comprendre leurs
-                    besoins en matière de personnel.
-                  </h4>
-                </div>
-              </div>
-              <form className="flex flex-col items-center flex-1 justify-center rounded-lg py-10 gap-10   bg-white shadow-xl group ">
-                <h2 className="text-3xl font-bold pb-5  text-blue-950 ">
-                  Contactez nous
-                </h2>
-                <div className="flex flex-col justify-center items-center gap-10 w-4/5 ">
-                  <div className="flex w-full gap-10">
-                    <div className="flex flex-col w-1/2 gap-2">
+              <form
+                onSubmit={handleNewMessage}
+                className="flex flex-col items-center transition-all justify-between   rounded-lg  py-10 h-full  bg-white   hover:bg-opacity-100  shadow-xl group "
+              >
+                <h2 className=" font-bold text-blue-950 ">Contactez nous</h2>
+                <p className="text-blue-950 p-10 text-justify [text-align-last:center]">
+                  En quête de talents ou d'opportunités professionnelles ?
+                  Contactez Plan B dès maintenant ! Nous connectons candidats et
+                  entreprises pour des partenariats réussis.
+                </p>
+                <div className="grid grid-rows-4  items-center gap-7 px-10 w-full">
+                  <div className="grid grid-cols-2 gap-10 justify-between row-span-1">
+                    <div className="flex flex-col  gap-1">
                       <label className="text-start">Nom complet</label>
                       <input
-                        className="rounded w-full p-2 text-black bg-[#f2f2f2] border border-gray-200 shadow-inner "
+                        className="shadow-inner rounded w-full p-2 text-black bg-[#fafafa] border border-gray-200  "
                         type="text"
+                        value={contactFullName}
+                        onChange={(e) => setContactFullName(e.target.value)}
                         required
                       />
                     </div>
-                    <div className="flex flex-col w-1/2 gap-2">
+                    <div className="flex flex-col gap-1">
                       <label className="text-start"> Courriel </label>
                       <input
-                        className="rounded w-full p-2 text-black bg-[#f2f2f2] border border-gray-200 shadow-inner "
+                        className="shadow-inner rounded w-full p-2 text-black bg-[#fafafa] border border-gray-200  "
                         type="email"
+                        value={contactEmail}
+                        onChange={(e) => setContactEmail(e.target.value)}
                         required
                       />
                     </div>
                   </div>
-                  <div className="flex flex-col items-center h-full w-full gap-4 ">
+                  <div className="flex flex-col w-full gap-1 items-start row-span-1">
+                    <label className="text-start"> Sujet </label>
+                    <input
+                      className="shadow-inner rounded w-full p-2 text-black bg-[#fafafa] border border-gray-200  "
+                      type="text"
+                      value={contactTitle}
+                      onChange={(e) => setContactTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col items-center h-full w-full gap-1 row-span-2 ">
                     <label className="self-start"> Message </label>
                     <textarea
-                      className="rounded w-full h-32 text-black  bg-[#f2f2f2] border border-gray-200 shadow-inner "
+                      className="rounded w-full flex-1 text-black  bg-[#fafafa] border border-gray-200  "
                       type="text"
                       size={400}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="inline-flex justify-center items-center m-auto w-full px-5 py-3 shadow-xl text-base font-semibold no-underline align-middle hover:bg-blue-500 text-white  rounded cursor-pointer select-none bg-blue-950 transition-colors"
+                    className="inline-flex shadow-xl justify-center items-center m-auto w-full px-5 py-3 text-base font-semibold no-underline align-middle hover:bg-blue-500 text-white  rounded cursor-pointer select-none bg-blue-950 transition-colors"
                   >
                     Envoyer
                   </button>

@@ -157,3 +157,26 @@ a {
   background-color: gray;
   color: white;
 }
+
+.carousel {
+  height: 100% !important;
+}
+
+.carousel .slider-wrapper {
+  display: flex;
+  gap: 5px;
+}
+
+.carousel.carousel-slider {
+  height: 100% !important;
+  background-color: #3f83f8 !important;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.carousel .control-dots {
+  padding-bottom: 10px !important;
+}

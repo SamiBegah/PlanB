@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../../firebase";
-import uuid from "react-uuid";
 import {
   addDoc,
   getDocs,
@@ -11,15 +9,26 @@ import {
   query,
   orderBy,
   FirestoreDataConverter,
+  where,
   setDoc,
 } from "firebase/firestore";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import uuid from "react-uuid";
 import locationIcon from "../../media/locationIcon.png";
 import fieldIcon from "../../media/fieldIcon.png";
 import scheduleIcon from "../../media/scheduleIcon.png";
 import salaryIcon from "../../media/salaryIcon.png";
-import copyIcon from "../../media/copyIcon.png";
+import idIcon from "../../media/idIcon.png";
+import addIcon from "../../media/addIcon.png";
+import refreshIcon from "../../media/refreshIcon.png";
+import seeIcon from "../../media/seeIcon.png";
+import downloadIcon from "../../media/downloadIcon.png";
 
-const AdminJobs = ({ fields }) => {
+import Applications from "./Applications";
+
+const Jobs = ({ db, jobs, fetchJobs, fields, locations }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [title, setTitle] = useState("");
   const [employer, setEmployer] = useState("");
   const [location, setLocation] = useState("");
@@ -31,10 +40,9 @@ const AdminJobs = ({ fields }) => {
   const [language, setLanguage] = useState("");
   const [description, setDescription] = useState("");
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [activeMenu, setActiveMenu] = useState("jobs");
+  const [subMenu, setSubMenu] = useState("add");
 
-  const [editId, setEditId] = useState("");
+  const [selectedId, setselectedId] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editEmployer, setEditEmployer] = useState("");
   const [editLocation, setEditLocation] = useState("");
@@ -46,35 +54,98 @@ const AdminJobs = ({ fields }) => {
   const [editLanguage, setEditLanguage] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
-  const [jobPostings, setJobPostings] = useState([]);
-  const [membersList, setMembersList] = useState([]);
+  const [filterKeyword, setFilterKeyword] = useState("");
+  const [filterField, setFilterField] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("open");
+  const [filterLocation, setFilterLocation] = useState("all");
+  const [filteredJobs, setFilteredJobs] = useState();
 
-  // Job list fetch
-  const fetchJobs = async () => {
-    await getDocs(collection(db, "postes")).then((querySnapshot) => {
-      const updatedJobList = querySnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      }));
-      setJobPostings(updatedJobList);
-    });
+  const [candidatesJob, setCandidatesJob] = useState("");
+
+  const handleFilterKeywordChange = (e) => {
+    setFilterKeyword(e.target.value.toLowerCase());
   };
 
-  const fetchMembers = async () => {
-    await getDocs(collection(db, "membres")).then((querySnapshot) => {
-      const updatedMembersList = querySnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      }));
+  const handleFilterFieldChange = (e) => {
+    setFilterField(e.target.value);
+  };
 
-      setMembersList(updatedMembersList);
-    });
+  const handleFilterStatusChange = (e) => {
+    setFilterStatus(e.target.value);
+  };
+
+  const handleFilterLocationChange = (e) => {
+    setFilterLocation(e.target.value);
+  };
+
+  const handleRefresh = () => {
+    setFilterKeyword("");
+    setFilterField("all");
+    setFilterStatus("open");
+    setFilterLocation("all");
+    setSearchParams("");
+    setselectedId("");
+    setSubMenu("add");
+  };
+  const applyFilters = () => {
+    let filtered = jobs;
+    filtered = filtered.filter(
+      (job) => job.status.toLowerCase() === filterStatus.toLowerCase()
+    );
+    console.log(filtered);
+    if (filterKeyword) {
+      filtered = filtered.filter(
+        (job) =>
+          job.id.toLowerCase().includes(filterKeyword) ||
+          job.title.toLowerCase().includes(filterKeyword) ||
+          job.description.toLowerCase().includes(filterKeyword)
+      );
+    }
+
+    if (filterField !== "all") {
+      filtered = filtered.filter(
+        (job) => job.field.toLowerCase() === filterField.toLowerCase()
+      );
+    }
+
+    if (filterLocation !== "all") {
+      filtered = filtered.filter(
+        (job) => job.location.toLowerCase() === filterLocation.toLowerCase()
+      );
+    }
+
+    setFilteredJobs(filtered);
   };
 
   useEffect(() => {
-    fetchJobs();
-    fetchMembers();
-  }, []);
+    applyFilters();
+  }, [jobs, filterKeyword, filterField, filterStatus, filterLocation]);
+
+  useEffect(() => {
+    if (candidatesJob) {
+      setselectedId(candidatesJob.id);
+    }
+    if (selectedId) {
+      setCandidatesJob(jobs.filter((job) => job.id === selectedId)[0]);
+    }
+  }, [candidatesJob, selectedId]);
+
+  /////////////////////////////////////////////////* JOBS MANAGEMENT *////////////////////////////////////////////////////////
+
+  const [applicationsList, setApplicationsList] = useState([]);
+
+  // Applications list fetch
+  const fetchApplications = async (id) => {
+    const applicationsQuery = query(collection(db, "candidatures"));
+    const querySnapshot = await getDocs(applicationsQuery);
+
+    const updatedApplicationsList = querySnapshot.docs.map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    }));
+
+    setApplicationsList(updatedApplicationsList);
+  };
 
   // New job form
   const handleNewJobSubmit = async (e) => {
@@ -104,10 +175,10 @@ const AdminJobs = ({ fields }) => {
           mode: mode,
           language: language,
           description: description,
-          createdAt: new Date(),
+          createdAt: new Date().toDateString(),
         }
       );
-      fetchJobs();
+
       setTitle("");
       setEmployer("");
       setLocation("");
@@ -128,15 +199,15 @@ const AdminJobs = ({ fields }) => {
     try {
       await deleteDoc(doc(db, "postes", id));
       alert("Poste d'emploi supprimé.");
-      fetchJobs();
+      setCandidatesJob("");
     } catch (id) {
       alert("Erreur, poste d'emploi non supprimé. Id: " + id);
     }
   };
 
   const handleEdit = (job) => {
-    setIsEditing(true);
-    setEditId(job.id);
+    setSubMenu("edit");
+    setselectedId(job.id);
     setEditTitle(job.title);
     setEditEmployer(job.employer);
     setEditLocation(job.location);
@@ -147,12 +218,13 @@ const AdminJobs = ({ fields }) => {
     setEditExperience(job.experience);
     setEditLanguage(job.language);
     setEditDescription(job.description);
+    setCandidatesJob("");
   };
 
   const handleJobPostEdit = async (e) => {
     e.preventDefault();
     try {
-      await updateDoc(doc(db, "postes", editId), {
+      await updateDoc(doc(db, "postes", selectedId), {
         title: editTitle,
         employer: editEmployer,
         location: editLocation,
@@ -166,9 +238,9 @@ const AdminJobs = ({ fields }) => {
         lastModifiedAt: new Date(),
       });
       alert("Poste mise à jour.");
-      setIsEditing(false);
-      fetchJobs();
-      setEditId("");
+      setSubMenu("add");
+
+      setselectedId("");
       setEditTitle("");
       setEditEmployer("");
       setEditLocation("");
@@ -184,8 +256,8 @@ const AdminJobs = ({ fields }) => {
   };
 
   const handleEditCancel = () => {
-    setIsEditing(false);
-    setEditId("");
+    setSubMenu("add");
+    setselectedId("");
     setEditTitle("");
     setEditEmployer("");
     setEditLocation("");
@@ -198,56 +270,102 @@ const AdminJobs = ({ fields }) => {
     setEditDescription("");
   };
 
+  useEffect(() => {
+    fetchApplications();
+    setFilterStatus("open");
+  }, []);
+
   return (
-    <div className="">
-      {/* Jobs filter */}
-      <div className="grid grid-cols-4 justify-around gap-10 bg-blue-500 rounded-lg p-5 shadow-inner">
-        <input
-          placeholder="Titre de poste, mots clés"
-          className="flex gap-5 text-center justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100"
-        ></input>
-        <select className="flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100">
-          <option defaultValue={"All"}>Tous les secteurs d'emploi </option>
-          {fields.map((field, index) => (
-            <option key={index} value={field.title}>
-              {field.title}
-            </option>
-          ))}
-        </select>
-        <select className="flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100">
-          <option defaultValue={"All"}> Tous types de poste </option>
-          {fields.map((field, index) => (
-            <option key={index} value={field.title}>
-              {field.title}
-            </option>
-          ))}
-        </select>
-        <select className="flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100">
-          <option defaultValue={"All"}> Tout emplacement </option>
-          {fields.map((field, index) => (
-            <option key={index} value={field.title}>
-              {field.title}
-            </option>
-          ))}
-        </select>
+    <div>
+      {/*  list filter */}
+      <div className="flex flex-col rounded-xl">
+        <div className="flex justify-around  gap-10 bg-blue-500 shadow-inner rounded-lg p-6 ">
+          <div className="grid grid-cols-4 gap-10 flex-1 ">
+            <input
+              placeholder="Titre de poste, mots clés"
+              className="w-full flex gap-5 text-center justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100 "
+              value={filterKeyword}
+              onChange={handleFilterKeywordChange}
+            ></input>
+
+            <select
+              className="w-full flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100 "
+              value={filterField}
+              onChange={handleFilterFieldChange}
+            >
+              <option value="all">Tous les secteurs d'emploi</option>
+              {fields.map((field, index) => (
+                <option key={index} value={field.title}>
+                  {field.title}
+                </option>
+              ))}
+            </select>
+
+            <select
+              onChange={handleFilterStatusChange}
+              value={filterStatus}
+              className="w-full flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100 "
+            >
+              <option value="open"> Postes ouverts </option>
+              <option value="closed">Postes fermés</option>
+            </select>
+
+            <select
+              className="w-full flex gap-5  justify-around items-center whitespace-nowrap shadow-xl rounded-md py-2 border border-gray-100 "
+              onChange={handleFilterLocationChange}
+              value={filterLocation}
+            >
+              <option value="all"> Tout emplacement </option>
+              {locations.map((location, index) => {
+                return (
+                  <option key={index} value={location}>
+                    {location}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="flex gap-5">
+            <button
+              className="w-fit flex gap-5 hover:scale-110 justify-around items-center whitespace-nowrap shadow-xl rounded-md bg-blue-950 hover:shadow-none  transition-all"
+              onClick={handleRefresh}
+            >
+              <img
+                className="h-10 w-10 p-1"
+                src={refreshIcon}
+                alt="Rafraichir"
+              />
+            </button>
+            <button
+              className="w-fit flex gap-5 hover:scale-110 justify-around items-center whitespace-nowrap shadow-xl rounded-md bg-blue-950 hover:shadow-none  transition-all"
+              onClick={() => (setSubMenu("add"), setselectedId(""))}
+            >
+              <img
+                className="h-10 w-10 p-1"
+                src={addIcon}
+                alt="Ajouter un poste"
+              />
+            </button>
+          </div>
+        </div>
       </div>
       {/* Jobs List */}
       <div className="w-full h-full grid grid-cols-3 py-5 gap-10 items-start">
         <div className=" h-full flex flex-col gap-20 col-span-1">
-          <div className="  h-full gap-10 bg-black bg-opacity-10 shadow-inner rounded-lg  p-2 ">
+          <div className="  h-[900px] gap-10 bg-black bg-opacity-10 shadow-inner rounded-lg  p-2 ">
             <ul className="flex flex-col h-full  overflow-y-scroll p-10 gap-5 ">
-              {jobPostings?.map((job) => (
+              {filteredJobs?.map((job) => (
                 <li
                   key={job.id}
-                  className={`rounded-lg group h-full bg-[#fafafa] shadow-xl transition-all  ${
-                    editId === job.id ? "scale-100  " : "scale-95"
+                  className={`rounded-lg group h-fit bg-[#fafafa] shadow-xl transition-all  ${
+                    selectedId === job.id ? "scale-100  " : "scale-95"
                   } hover:scale-100 transition-all`}
                 >
                   <div
                     className={`p-3 flex items-center justify-between w-full text-white whitespace-nowrap
-                        ] bg-blue-500 rounded-t-lg transition-all ${
-                          editId === job.id ? "bg-blue-950  " : ""
-                        }`}
+                  ] bg-blue-500 rounded-t-lg transition-all ${
+                    selectedId === job.id ? "bg-blue-950  " : ""
+                  }`}
                   >
                     <small className="w-3/4 ">{job.field}</small>
                     <small className=" top-2 right-2 text-end ">{job.id}</small>
@@ -255,7 +373,7 @@ const AdminJobs = ({ fields }) => {
                   <div className="flex flex-1 flex-col gap-5 p-5 justify-between">
                     <h4
                       className={` text-blue-500 font-bold transition-all  ${
-                        editId === job.id ? "text-blue-950  " : ""
+                        selectedId === job.id ? "text-blue-950  " : ""
                       }`}
                     >
                       {job.title}
@@ -304,21 +422,31 @@ const AdminJobs = ({ fields }) => {
 
                   <div className="flex gap-2 justify-center items-center w-full pb-5 text-white">
                     <button
-                      onClick={() => handleEdit(job)}
-                      className="p-2 px-5 hover:font-bold  bg-blue-950 rounded shadow-xl  hover:scale-105 transition-all"
+                      onClick={() => (
+                        setselectedId(job.id),
+                        setCandidatesJob(job),
+                        setSubMenu("candidates")
+                      )}
+                      className="p-2 px-5   bg-blue-950 rounded shadow-xl  hover:scale-105 transition-all"
                     >
-                      Candidatures
+                      Candidatures (
+                      {applicationsList
+                        ? applicationsList.filter(
+                            (application) => application.jobId === job.id
+                          ).length
+                        : 0}
+                      )
                     </button>
                     <button
                       onClick={() => handleEdit(job)}
-                      className="p-2 px-5 hover:font-bold bg-blue-500 rounded shadow-xl  hover:scale-105 transition-all"
+                      className="p-2 px-5  bg-blue-500 rounded shadow-xl  hover:scale-105 transition-all"
                     >
                       Modifier
                     </button>
 
                     <button
                       onClick={() => handleDelete(job.id)}
-                      className="p-2 px-5 hover:font-bold bg-gray-500 rounded shadow-xl  hover:scale-105 transition-all"
+                      className="p-2 px-5  bg-gray-500 rounded shadow-xl  hover:scale-105 transition-all"
                     >
                       Supprimer
                     </button>
@@ -329,7 +457,7 @@ const AdminJobs = ({ fields }) => {
           </div>
         </div>
         <div className="w-full h-full sticky top-40 flex flex-col justify-around gap-10 col-span-2">
-          {!isEditing ? (
+          {subMenu === "add" ? (
             <form
               className="flex flex-col items-center flex-1 justify-center rounded-lg py-10 gap-10 bg-white shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px] group "
               onSubmit={handleNewJobSubmit}
@@ -339,7 +467,7 @@ const AdminJobs = ({ fields }) => {
               </h3>
               <div className="grid grid-cols-3 gap-10 w-4/5 whitespace-nowrap ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="title">
+                  <label className="col-span-1" htmlFor="title">
                     Titre
                   </label>
                   <input
@@ -353,7 +481,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="employer">
+                  <label className="col-span-1" htmlFor="employer">
                     Employeur
                   </label>
                   <input
@@ -366,7 +494,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="location">
+                  <label className="col-span-1" htmlFor="location">
                     Emplacement
                   </label>
                   <input
@@ -380,7 +508,7 @@ const AdminJobs = ({ fields }) => {
               </div>
               <div className="grid grid-cols-3  gap-10 w-4/5 ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="salary">
+                  <label className="col-span-1" htmlFor="salary">
                     Salaire
                   </label>
                   <input
@@ -393,7 +521,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="field">
+                  <label className="col-span-1" htmlFor="field">
                     Secteur
                   </label>
                   <select
@@ -403,7 +531,7 @@ const AdminJobs = ({ fields }) => {
                     value={field}
                     required
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     {fields.map((field, index) => (
                       <option key={index} value={field.title}>
                         {field.title}
@@ -412,7 +540,7 @@ const AdminJobs = ({ fields }) => {
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="schedule">
+                  <label className="col-span-1" htmlFor="schedule">
                     Horaire
                   </label>
                   <select
@@ -422,7 +550,7 @@ const AdminJobs = ({ fields }) => {
                     value={schedule}
                     required
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="Temps partiel">Temps partiel</option>
                     <option value="Temps plein">Temps plein</option>
                     <option value="Permanent">Permanent</option>
@@ -432,7 +560,7 @@ const AdminJobs = ({ fields }) => {
               </div>
               <div className="grid grid-cols-3  gap-10 w-4/5 ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="mode">
+                  <label className="col-span-1" htmlFor="mode">
                     Mode
                   </label>
                   <select
@@ -442,14 +570,14 @@ const AdminJobs = ({ fields }) => {
                     value={mode}
                     required
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="Présentiel">Présentiel</option>
                     <option value="Télétravail">Télétravail</option>
                     <option value="Permanent">Hybride</option>
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="experience">
+                  <label className="col-span-1" htmlFor="experience">
                     Experience
                   </label>
                   <select
@@ -458,7 +586,7 @@ const AdminJobs = ({ fields }) => {
                     onChange={(e) => setExperience(e.target.value)}
                     value={experience}
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="0 à 1 ans">0 à 1 ans</option>
                     <option value="1 à 3 ans">1 à 3 ans</option>
                     <option value="3 à 5 ans">3 à 5 ans</option>
@@ -466,7 +594,7 @@ const AdminJobs = ({ fields }) => {
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="language">
+                  <label className="col-span-1" htmlFor="language">
                     Langue(s)
                   </label>
                   <select
@@ -475,7 +603,7 @@ const AdminJobs = ({ fields }) => {
                     onChange={(e) => setLanguage(e.target.value)}
                     value={language}
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="Francais">Francais</option>
                     <option value="Anglais">Anglais</option>
                     <option value="Bilingue">Bilingue</option>
@@ -483,7 +611,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
               </div>
               <div className="flex flex-1 w-4/5 flex-col gap-2">
-                <label for="description"> Description </label>
+                <label htmlFor="description"> Description </label>
                 <textarea
                   name="description"
                   className="flex-1 border border-gray-200 shadow-inner overflow-y-scroll bg-[#fafafa]"
@@ -493,12 +621,16 @@ const AdminJobs = ({ fields }) => {
               </div>
               <button
                 type="submit"
-                className="p-3 px-5 hover:font-bold bg-blue-950 rounded shadow-xl text-white hover:bg-blue-500 transition-all"
+                className="p-3 px-5  bg-blue-950 rounded shadow-xl text-white hover:bg-blue-500 transition-all"
               >
                 Ajouter ce poste
               </button>
             </form>
           ) : (
+            ""
+          )}
+
+          {subMenu === "edit" ? (
             <form
               className="flex flex-col items-center flex-1 justify-center rounded-lg py-10 gap-10 bg-white shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px] "
               onSubmit={handleJobPostEdit}
@@ -510,19 +642,19 @@ const AdminJobs = ({ fields }) => {
                 <div className="flex gap-2 items-center justify-center group hover:scale-105 transition-all cursor-pointer">
                   <button>
                     <img
-                      src={copyIcon}
-                      alt="Copy"
+                      src={idIcon}
+                      alt="ID"
                       className="w-10 h-10 p-2 opacity-50 transition-all group-hover:opacity-100"
                     />
                   </button>
                   <small className="text-blue-500 text-center">
-                    ID: {editId}
+                    ID: {selectedId}
                   </small>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-10 w-4/5 whitespace-nowrap ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="title">
+                  <label className="col-span-1" htmlFor="title">
                     Titre
                   </label>
                   <input
@@ -535,7 +667,7 @@ const AdminJobs = ({ fields }) => {
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editEmployer">
+                  <label className="col-span-1" htmlFor="editEmployer">
                     Employeur
                   </label>
                   <input
@@ -548,7 +680,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editLocation">
+                  <label className="col-span-1" htmlFor="editLocation">
                     Emplacement
                   </label>
                   <input
@@ -562,7 +694,7 @@ const AdminJobs = ({ fields }) => {
               </div>
               <div className="grid grid-cols-3 gap-10 w-4/5 whitespace-nowrap ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editSalary">
+                  <label className="col-span-1" htmlFor="editSalary">
                     Salaire
                   </label>
                   <input
@@ -575,7 +707,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editField">
+                  <label className="col-span-1" htmlFor="editField">
                     Secteur
                   </label>
                   <select
@@ -593,7 +725,7 @@ const AdminJobs = ({ fields }) => {
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editSchedule">
+                  <label className="col-span-1" htmlFor="editSchedule">
                     Horaire
                   </label>
                   <select
@@ -610,7 +742,7 @@ const AdminJobs = ({ fields }) => {
               </div>
               <div className="grid grid-cols-3 gap-10 w-4/5 whitespace-nowrap ">
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editMode">
+                  <label className="col-span-1" htmlFor="editMode">
                     Mode
                   </label>
                   <select
@@ -620,14 +752,14 @@ const AdminJobs = ({ fields }) => {
                     value={editMode}
                     required
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="Présentiel">Présentiel</option>
                     <option value="Télétravail">Télétravail</option>
                     <option value="Hybride">Hybride</option>
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editExperience">
+                  <label className="col-span-1" htmlFor="editExperience">
                     Experience
                   </label>
                   <select
@@ -636,7 +768,7 @@ const AdminJobs = ({ fields }) => {
                     onChange={(e) => setEditExperience(e.target.value)}
                     value={editExperience}
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="0 à 1 ans">0 à 1 ans</option>
                     <option value="1 à 3 ans">1 à 3 ans</option>
                     <option value="3 à 5 ans">3 à 5 ans</option>
@@ -644,7 +776,7 @@ const AdminJobs = ({ fields }) => {
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-2 ">
-                  <label className="col-span-1" for="editLanguage">
+                  <label className="col-span-1" htmlFor="editLanguage">
                     Langue(s)
                   </label>
                   <select
@@ -653,7 +785,7 @@ const AdminJobs = ({ fields }) => {
                     onChange={(e) => setEditLanguage(e.target.value)}
                     value={editLanguage}
                   >
-                    <option value="" selected></option>
+                    <option value="" defaultValue={""}></option>
                     <option value="Francais">Francais</option>
                     <option value="Anglais">Anglais</option>
                     <option value="Bilingue">Bilingue</option>
@@ -661,7 +793,7 @@ const AdminJobs = ({ fields }) => {
                 </div>
               </div>
               <div className="flex flex-1 w-4/5 flex-col gap-2 ">
-                <label for="editDescription"> Description </label>
+                <label htmlFor="editDescription"> Description </label>
                 <textarea
                   name="editDescription"
                   className="flex-1 border border-gray-200 shadow-inner overflow-y-scroll bg-[#fafafa]"
@@ -673,18 +805,36 @@ const AdminJobs = ({ fields }) => {
               <div className="flex justify-around gap-10 text-white">
                 <button
                   type="submit"
-                  className="p-3 px-5 hover:font-bold bg-blue-500 rounded shadow-xl  hover:bg-blue-950 transition-all"
+                  className="p-3 px-5  bg-blue-500 rounded shadow-xl  hover:bg-blue-950 transition-all"
                 >
                   Mettre à jour
                 </button>
                 <button
                   onClick={handleEditCancel}
-                  className="p-3 px-5 hover:font-bold bg-gray-500 rounded shadow-xl hover:bg-gray-800 transition-all"
+                  className="p-3 px-5  bg-gray-500 rounded shadow-xl hover:bg-gray-800 transition-all"
                 >
                   Annuler
                 </button>
               </div>
             </form>
+          ) : (
+            ""
+          )}
+          {subMenu === "candidates" ? (
+            <Applications
+              db={db}
+              jobs={jobs}
+              setFilterStatus={setFilterStatus}
+              candidatesJob={candidatesJob}
+              setCandidatesJob={setCandidatesJob}
+              fetchJobs={fetchJobs}
+              setSubMenu={setSubMenu}
+              fetchApplications={fetchApplications}
+              setselectedId={setselectedId}
+              selectedId={selectedId}
+            />
+          ) : (
+            ""
           )}
         </div>
       </div>
@@ -692,4 +842,4 @@ const AdminJobs = ({ fields }) => {
   );
 };
 
-export default AdminJobs;
+export default Jobs;

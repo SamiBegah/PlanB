@@ -16,6 +16,7 @@ module.exports = {
         "employer-img": "url('/src/media/employerBg.jpg')",
         "reviews-img": "url('/src/media/reviewsBg.jpg')",
         "contact-img": "url('/src/media/contactImage.jpg')",
+        "map-img": "url('/src/media/map.png')",
       },
     },
   },

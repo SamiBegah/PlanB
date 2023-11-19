@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
 import Map from "react-map-gl";
 
-const Footer = ({ title, links, fields }) => {
+const Footer = ({ title, setSelectedField, fields, jobs }) => {
   return (
     <nav className="flex flex-col justify-between gap-5 pt-20 bg-blue-950 text-white">
       <div className="grid grid-cols-4 px-20 gap-20 items-start justify-center max-w-[1920px] mx-auto">
@@ -35,9 +35,15 @@ const Footer = ({ title, links, fields }) => {
             <div className="flex flex-col gap-1 ">
               {fields.map((field, index) => (
                 <div key={index} className="flex w-fit text-start p-1 ">
-                  <a className="hover:text-white hover:font-bold hover:no-underline cursor-pointer">
+                  <Link
+                    onClick={() => {
+                      setSelectedField(field.title);
+                    }}
+                    to="/emplois"
+                    className="hover:text-white hover:font-bold hover:no-underline cursor-pointer"
+                  >
                     {field.title}
-                  </a>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -49,11 +55,14 @@ const Footer = ({ title, links, fields }) => {
               Emplois récents
             </h3>
             <div className="flex flex-col gap-1">
-              {fields.map((field, index) => (
+              {jobs.slice(0, 7).map((job, index) => (
                 <div key={index} className="flex w-fit text-center p-1">
-                  <a className="hover:text-white hover:font-bold hover:no-underline cursor-pointer">
-                    {field.title}
-                  </a>
+                  <Link
+                    to={`/emplois?jobId=${job.id}`}
+                    className="hover:text-white hover:font-bold hover:no-underline cursor-pointer"
+                  >
+                    {job.title}
+                  </Link>
                 </div>
               ))}
             </div>
@@ -63,12 +72,13 @@ const Footer = ({ title, links, fields }) => {
           <div className="flex flex-col">
             <h3 className="text-xl pb-2 font-bold underline">À propos</h3>
             <p className="text-justify w-3/4">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis
-              lobortis purus sed risus euismod, ac accumsan lectus congue.
-              Interdum et malesuada fames ac ante ipsum primis in faucibus.
-              <br /> Duis lobortis purus sed risus euismod, ac accumsan lectus
-              congue. Duis lobortis purus sed risus euismod, ac accumsan lectus
-              congue.
+              Avec une vision novatrice, Plan B Placement est plus qu'une simple
+              agence de placement de personnel.
+              <br /> Plan B s'engage à cultiver un environnement propice à
+              l'épanouissement professionnel et personnel de ses candidats.
+              <br /> Pour les employeurs, Plan B offre une source variée de
+              talents prêts à relever les défis actuels et futurs de votre
+              entreprise.
             </p>
           </div>
         </div>
@@ -76,9 +86,6 @@ const Footer = ({ title, links, fields }) => {
 
       <div className="relative  w-full m-0 p-5 flex justify-center items-center">
         <p> © Plan B Placement - 2023 </p>
-        <a href="/portailAdmin" className="absolute right-0 text-gray-500">
-          Portail Admin →
-        </a>
       </div>
     </nav>
   );

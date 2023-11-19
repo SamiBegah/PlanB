@@ -4,7 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { auth, db } from "../../firebase";
+import uuid from "react-uuid";
 import {
   addDoc,
   getDoc,
@@ -20,74 +20,118 @@ import {
 } from "firebase/firestore";
 import employerEnd from "../../media/employerEnd.jpg";
 
-const Connection = ({ setUserName }) => {
+const LoginPage = ({ db, auth, setPopUpMessage }) => {
   const navigate = useNavigate();
-
-  const [connectionPanel, setConnectionPanel] = useState("register");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const welcomeTitle = "Bienvenue chez Plan B Placement!";
+  const welcomeContent = `Bonjour ${firstName} ${lastName}, bienvenue chez Plan B Placement!`;
+
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  const [errorMessage, setErrorMessage] = useState("");
+  const [loginErrorMessage, setLoginErrorMessage] = useState("");
+  const [signupErrorMessage, setsignupErrorMessage] = useState("");
 
-  let user;
+  let userId;
+
+  const handleNewMessageWelcome = async () => {
+    try {
+      setDoc(
+        doc(
+          db,
+          `${email} - messages reçues`,
+          `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De Plan B Placement à ${email}: ${welcomeTitle}`
+        ),
+        {
+          id: `${new Date().toDateString()}-${uuid().substring(
+            0,
+            3
+          )}- De Plan B Placement à ${email}: ${welcomeTitle}`,
+          to: email,
+          title: welcomeTitle,
+          content: welcomeContent,
+          from: "l'équipe de Plan B Placement",
+          createdAt: new Date().toDateString(),
+        }
+      );
+    } catch (e) {
+      alert("Message non envoyé. Erreur produite." + e);
+    }
+  };
 
   // Sign up
   const signingUpHandler = async (e) => {
     e.preventDefault();
     if (firstName !== "" && lastName !== "") {
-      await createUserWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          // Signed in
-          user = userCredential.user;
-          createNewMemberData(user);
-          navigate("/");
-          // ...
-        })
-        .catch((error) => {
-          setErrorMessage(error.message);
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        userId = userCredential.user.uid;
 
-          // ..
-        });
+        if (userId) {
+          await createNewMemberData(userId);
+          handleNewMessageWelcome();
+          setPopUpMessage("Votre compte a bien été créé! Vous êtes en ligne.");
+          navigate("/");
+        }
+      } catch (error) {
+        setsignupErrorMessage(error.message);
+      }
     } else {
-      setErrorMessage("Tous les champs ne sont pas remplis.");
+      setsignupErrorMessage("Tous les champs ne sont pas remplis.");
     }
   };
 
   // Adding member to database
-  const createNewMemberData = async (user) => {
+  const createNewMemberData = async (userId) => {
     try {
-      await setDoc(doc(db, "membres", user.uid), {
+      await setDoc(doc(db, "membres", userId), {
+        id: userId,
         firstName: firstName,
         lastName: lastName,
         email: email,
         status: "Nouveau candidat",
         createdAt: new Date().toDateString(),
       });
-      console.log("Nouveau membre enregistré!");
-    } catch (e) {
-      alert("Nouveau membre non enregistré.");
+      setPopUpMessage("Votre compte a bien été créé!");
+    } catch (error) {
+      setPopUpMessage(
+        "Une erreur s'est produire lors de la création de compte, veuillez reéssayez. " +
+          error.message
+      );
+      navigate("/connexion");
     }
   };
 
   // Login
   const loginHandler = async (e) => {
     e.preventDefault();
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in
-        user = userCredential.user;
-        navigate("/");
-        console.log(user);
-      })
-      .catch((error) => {
-        setErrorMessage(error.message);
-      });
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        loginEmail,
+        loginPassword
+      );
+      userId = userCredential.user.uid;
+      setPopUpMessage("Vous êtes en ligne.");
+      navigate("/");
+    } catch (error) {
+      console.error(
+        "Erreur de connexion, veuillez reéssayez. " + error.message
+      );
+      setLoginErrorMessage(error.message);
+    }
   };
 
   return (
@@ -99,14 +143,12 @@ const Connection = ({ setUserName }) => {
       >
         <div className=" flex py-60 justify-start items-center bg-gradient-to-b from-transparent via-transparent to-blue-950">
           <div className="w-full px-40 max-w-[1920px] mx-auto">
-            <div className=" w-full  gap-10 px-10 flex justify-center items-center h-full transition-all ">
+            <div className=" w-full  gap-20 px-10 flex justify-center items-center h-full transition-all ">
               <form
                 onSubmit={signingUpHandler}
                 className="flex flex-col items-center transition-all justify-center rounded-lg  w-1/2 gap-10 h-full py-20 bg-white  shadow-xl   group "
               >
-                <h2 className="text-3xl text-center text-blue-950">
-                  Inscription
-                </h2>
+                <h2 className=" text-center text-blue-950">Inscription</h2>
                 <div className="grid grid-rows-3 justify-center items-center gap-5 w-4/5 ">
                   <div className="grid grid-cols-4  w-full justify-start text-lg items-center ">
                     <div className="grid grid-cols-2 col-span-2">
@@ -166,7 +208,9 @@ const Connection = ({ setUserName }) => {
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
-                  <span className="text-red-500"> {errorMessage} </span>
+                  <span className="text-red-500">
+                    <span className="invisible"> - </span> {signupErrorMessage}{" "}
+                  </span>
 
                   <button
                     type="submit"
@@ -180,14 +224,12 @@ const Connection = ({ setUserName }) => {
                   </div>
                 </div>
               </form>
-              <h4 className="text-white mx-10 "> ou</h4>
+
               <form
                 onSubmit={loginHandler}
                 className="flex flex-col items-center transition-all justify-center rounded-lg w-1/2 gap-10 h-full py-20 bg-white  shadow-xl "
               >
-                <h2 className="text-3xl text-center text-blue-500">
-                  Connexion
-                </h2>
+                <h2 className=" text-center text-blue-500">Connexion</h2>
                 <div className="grid grid-rows-3 gap-5 items-center  w-4/5">
                   <div className="flex gap-2 w-full justify-between text-lg items-center ">
                     <label
@@ -231,7 +273,9 @@ const Connection = ({ setUserName }) => {
                     />
                   </div>
 
-                  <span className="text-red-500"> {errorMessage} </span>
+                  <span className="text-red-500">
+                    <span className="invisible"> - </span> {loginErrorMessage}
+                  </span>
 
                   <button
                     type="submit"
@@ -253,4 +297,4 @@ const Connection = ({ setUserName }) => {
   );
 };
 
-export default Connection;
+export default LoginPage;
